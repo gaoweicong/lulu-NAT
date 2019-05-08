@@ -1,5 +1,9 @@
 package com.glwlc.nat.server.config;
 
+import com.glwlc.nat.server.service.NatConnectHandler;
+import org.springframework.context.annotation.Configuration;
+
+import javax.annotation.Resource;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -16,31 +20,35 @@ import java.util.regex.Pattern;
  * @Date: 2019-04-24 15:42
  */
 @WebFilter(filterName = "natFilter")
-public class NatFilter implements Filter {
+@Configuration
+    public class NatFilter implements Filter {
 
     private static final String SERVER_NAME_PATTERN = "\\w+.glwlc.top";
+
+    @Resource
+    private NatConnectHandler natConnectHandler;
 
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response,
                                     FilterChain filterChain) throws IOException, ServletException {
 
-
         String serverName = request.getServerName();
 
         if (!Pattern.matches(SERVER_NAME_PATTERN, serverName))
             filterChain.doFilter(request, response);
+        else {
+            String secondDomainName=serverName.substring(0, serverName.indexOf("."));
 
-        String secondDomainName=serverName.substring(0, serverName.indexOf("."));
-
-        if (secondDomainName.equalsIgnoreCase("www"))
-            filterChain.doFilter(request, response);
-
-        String requestURI = ((HttpServletRequest)request).getRequestURI();
-
-//
-//        httpServletRequest.getRequestDispatcher("/"+realPath)
-//                .forward(httpServletRequest, httpServletResponse);
+            if (secondDomainName.equalsIgnoreCase("www"))
+                filterChain.doFilter(request, response);
+            else {
+                byte[] payload = natConnectHandler.handlerNat((HttpServletRequest) request, secondDomainName);
+                response.setContentType("text/html;charset=UTF-8");
+                response.getOutputStream().write(payload);
+                // TODO
+            }
+        }
     }
 
     @Override
