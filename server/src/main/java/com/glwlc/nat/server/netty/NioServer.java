@@ -1,5 +1,8 @@
 package com.glwlc.nat.server.netty;
 
+import com.glwlc.nat.server.netty.Handler.LongConnectChannelHandler;
+import com.glwlc.nat.server.netty.Handler.MessageDecoderHandler;
+import com.glwlc.nat.server.netty.Handler.MessageEncoderHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
@@ -9,7 +12,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.string.StringEncoder;
+
+import static com.glwlc.nat.server.netty.model.NatProtocolMessage.DELIMITER_FP;
 
 /**
  * @Author: Gavin
@@ -57,11 +61,13 @@ public class NioServer {
 
             // 1024是读取数据的最大长度, 这是防止分隔符在传输中丢失导致内存溢出
             socketChannel.pipeline().addLast(new DelimiterBasedFrameDecoder(DEFAULT_MAX_LENGTH,
-                    Unpooled.copiedBuffer(LongConnectChannelHandler.DELIMITER_FP.getBytes())));
+                    Unpooled.copiedBuffer(DELIMITER_FP)));
+            // 编解码处理器
+            socketChannel.pipeline().addLast(new MessageDecoderHandler());
+            socketChannel.pipeline().addLast(new MessageEncoderHandler());
             // 类似于流式编程的管道, 可定义各种解析处理器
             socketChannel.pipeline().addLast(new LongConnectChannelHandler(socketChannel));
-            // 写数据时, String转成ByteBuf
-            socketChannel.pipeline().addLast(new StringEncoder());
+
         }
 
 
